@@ -1,4 +1,3 @@
-import React from 'react';
 import React, { useState } from 'react';
 import { Calendar, Clock, TrendingUp, TrendingDown, User, Users } from 'lucide-react';
 import { shiftSessions, shifts } from '../../data/dummyData';

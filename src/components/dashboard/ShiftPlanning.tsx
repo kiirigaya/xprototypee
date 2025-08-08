@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { Plus, Calendar, Clock, MapPin, Camera } from 'lucide-react';
 import { Modal } from '../ui/Modal';
-import { shifts, servers } from '../../data/dummyData';
+import { shifts, servers, shiftSessions } from '../../data/dummyData';
 
-export const ShiftPlanning: React.FC = () => {
+interface ShiftPlanningProps {
+  onViewSessions?: (shiftId: string) => void;
+}
+
+export const ShiftPlanning: React.FC<ShiftPlanningProps> = ({ onViewSessions }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>('All');
   const [newShift, setNewShift] = useState({
@@ -56,6 +60,10 @@ export const ShiftPlanning: React.FC = () => {
         shifts: shifts.filter(shift => shift.day === selectedDay)
       }];
     }
+  };
+
+  const getShiftSessionCount = (shiftId: string) => {
+    return shiftSessions.filter(session => session.shiftId === shiftId).length;
   };
 
   return (
@@ -169,8 +177,11 @@ export const ShiftPlanning: React.FC = () => {
                           <button className="text-[#006A71] hover:text-[#004a51] mr-3">
                             Edit
                           </button>
-                          <button className="text-[#48A6A7] hover:text-[#006A71]">
-                            View Sessions
+                          <button 
+                            onClick={() => onViewSessions && onViewSessions(shift.id)}
+                            className="text-[#48A6A7] hover:text-[#006A71]"
+                          >
+                            View Sessions ({getShiftSessionCount(shift.id)})
                           </button>
                         </td>
                       </tr>

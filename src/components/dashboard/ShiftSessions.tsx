@@ -1,8 +1,12 @@
 import React from 'react';
+import React, { useState } from 'react';
 import { Calendar, Clock, TrendingUp, TrendingDown, User, Users } from 'lucide-react';
 import { shiftSessions, shifts } from '../../data/dummyData';
 
 export const ShiftSessions: React.FC = () => {
+  const [selectedShift, setSelectedShift] = useState<string>('all');
+  const [selectedArea, setSelectedArea] = useState<string>('all');
+
   const getShiftInfo = (shiftId: string) => {
     return shifts.find(shift => shift.id === shiftId);
   };
@@ -25,6 +29,35 @@ export const ShiftSessions: React.FC = () => {
     return 'text-red-600';
   };
 
+  const getFilteredSessions = () => {
+    let filtered = shiftSessions;
+    
+    if (selectedShift !== 'all') {
+      filtered = filtered.filter(session => session.shiftId === selectedShift);
+    }
+    
+    if (selectedArea !== 'all') {
+      const shiftInfo = getShiftInfo(session.shiftId);
+      filtered = filtered.filter(session => {
+        const shiftInfo = getShiftInfo(session.shiftId);
+        return shiftInfo?.area === selectedArea;
+      });
+    }
+    
+    return filtered;
+  };
+
+  const getUniqueAreas = () => {
+    const areas = new Set<string>();
+    shiftSessions.forEach(session => {
+      const shift = getShiftInfo(session.shiftId);
+      if (shift?.area) areas.add(shift.area);
+    });
+    return Array.from(areas);
+  };
+
+  const filteredSessions = getFilteredSessions();
+
   return (
     <div className="space-y-6">
       <div>
@@ -32,9 +65,46 @@ export const ShiftSessions: React.FC = () => {
         <p className="text-gray-600 mt-1">Historical performance data for completed shifts</p>
       </div>
 
+      {/* Filters */}
+      <div className="bg-white shadow rounded-lg p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Shift</label>
+            <select
+              value={selectedShift}
+              onChange={(e) => setSelectedShift(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+            >
+              <option value="all">All Shifts</option>
+              {shifts.map((shift) => (
+                <option key={shift.id} value={shift.id}>
+                  {shift.serverName} - {shift.area} ({shift.day} {shift.startTime}-{shift.endTime})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Area</label>
+            <select
+              value={selectedArea}
+              onChange={(e) => setSelectedArea(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+            >
+              <option value="all">All Areas</option>
+              {getUniqueAreas().map((area) => (
+                <option key={area} value={area}>{area}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 text-sm text-gray-600">
+          Showing {filteredSessions.length} of {shiftSessions.length} sessions
+        </div>
+      </div>
+
       {/* Sessions List */}
       <div className="space-y-4">
-        {shiftSessions.map((session) => {
+        {filteredSessions.map((session) => {
           const shift = getShiftInfo(session.shiftId);
           return (
             <div key={session.id} className="bg-white shadow rounded-lg p-6">
@@ -155,25 +225,34 @@ export const ShiftSessions: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-[#006A71]">
-              {shiftSessions.length}
+              {filteredSessions.length}
             </div>
             <div className="text-sm text-gray-500">Total Sessions</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-[#48A6A7]">
-              {(shiftSessions.reduce((acc, s) => acc + s.serverEmotionScore, 0) / shiftSessions.length).toFixed(1)}
+              {filteredSessions.length > 0 
+                ? (filteredSessions.reduce((acc, s) => acc + s.serverEmotionScore, 0) / filteredSessions.length).toFixed(1)
+                : '0.0'
+              }
             </div>
             <div className="text-sm text-gray-500">Avg Server Emotion</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-[#9ACBD0]">
-              {(shiftSessions.reduce((acc, s) => acc + s.clientEmotionScore, 0) / shiftSessions.length).toFixed(1)}
+              {filteredSessions.length > 0 
+                ? (filteredSessions.reduce((acc, s) => acc + s.clientEmotionScore, 0) / filteredSessions.length).toFixed(1)
+                : '0.0'
+              }
             </div>
             <div className="text-sm text-gray-500">Avg Client Emotion</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-600">
-              {Math.round(shiftSessions.reduce((acc, s) => acc + s.duration, 0) / shiftSessions.length)}m
+              {filteredSessions.length > 0 
+                ? Math.round(filteredSessions.reduce((acc, s) => acc + s.duration, 0) / filteredSessions.length)
+                : 0
+              }m
             </div>
             <div className="text-sm text-gray-500">Avg Duration</div>
           </div>

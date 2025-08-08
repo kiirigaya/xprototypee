@@ -21,6 +21,7 @@ export const Dashboard: React.FC = () => {
   const [activePanel, setActivePanel] = useState<DashboardPanel>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [liveTrackingServerId, setLiveTrackingServerId] = useState<string | null>(null);
+  const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
 
   const navigation = [
     { id: 'overview', name: 'Overview', icon: BarChart3 },
@@ -36,6 +37,11 @@ export const Dashboard: React.FC = () => {
     setActivePanel('live');
   };
 
+  const handleViewSessions = (shiftId: string) => {
+    setSelectedShiftId(shiftId);
+    setActivePanel('sessions');
+  };
+
   const renderPanel = () => {
     switch (activePanel) {
       case 'overview':
@@ -45,7 +51,7 @@ export const Dashboard: React.FC = () => {
       case 'cameras':
         return <CameraManagement />;
       case 'shifts':
-        return <ShiftPlanning />;
+        return <ShiftPlanning onViewSessions={handleViewSessions} />;
       case 'sessions':
         return <ShiftSessions />;
       case 'live':
@@ -78,6 +84,9 @@ export const Dashboard: React.FC = () => {
                       setSidebarOpen(false);
                       if (item.id !== 'live') {
                         setLiveTrackingServerId(null);
+                      }
+                      if (item.id !== 'sessions') {
+                        setSelectedShiftId(null);
                       }
                     }}
                     className={`${

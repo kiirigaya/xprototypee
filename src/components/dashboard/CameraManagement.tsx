@@ -8,15 +8,13 @@ interface CameraDevice {
   area: string;
   status: 'online' | 'offline' | 'maintenance';
   resolution: string;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
+  assigned: boolean;
 }
 
-interface CameraLayout {
+interface CameraSlot {
   id: string;
-  name: string;
-  cameras: CameraDevice[];
-  gridSize: { rows: number; cols: number };
+  camera: CameraDevice | null;
+  position: { row: number; col: number };
 }
 
 export const CameraManagement: React.FC = () => {
@@ -27,8 +25,7 @@ export const CameraManagement: React.FC = () => {
       area: 'Reception',
       status: 'online',
       resolution: '1080p',
-      position: { x: 20, y: 20 },
-      size: { width: 200, height: 150 }
+      assigned: true
     },
     {
       id: 'cam-002',
@@ -36,8 +33,7 @@ export const CameraManagement: React.FC = () => {
       area: 'Customer Service',
       status: 'online',
       resolution: '1080p',
-      position: { x: 240, y: 20 },
-      size: { width: 200, height: 150 }
+      assigned: true
     },
     {
       id: 'cam-003',
@@ -45,8 +41,7 @@ export const CameraManagement: React.FC = () => {
       area: 'Support Desk',
       status: 'offline',
       resolution: '720p',
-      position: { x: 20, y: 190 },
-      size: { width: 200, height: 150 }
+      assigned: false
     },
     {
       id: 'cam-004',
@@ -54,25 +49,75 @@ export const CameraManagement: React.FC = () => {
       area: 'VIP Lounge',
       status: 'online',
       resolution: '4K',
-      position: { x: 240, y: 190 },
-      size: { width: 200, height: 150 }
+      assigned: true
+    },
+    {
+      id: 'cam-005',
+      name: 'Waiting Area',
+      area: 'Waiting Area',
+      status: 'maintenance',
+      resolution: '1080p',
+      assigned: false
+    },
+    {
+      id: 'cam-006',
+      name: 'Sales Floor',
+      area: 'Sales Floor',
+      status: 'online',
+      resolution: '1080p',
+      assigned: false
     }
   ]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedCamera, setSelectedCamera] = useState<CameraDevice | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [draggedCamera, setDraggedCamera] = useState<CameraDevice | null>(null);
+  const [cameraSlots, setCameraSlots] = useState<CameraSlot[]>([]);
   const [newCamera, setNewCamera] = useState({
     name: '',
     area: '',
     resolution: '1080p'
   });
 
-  const canvasRef = useRef<HTMLDivElement>(null);
-
   const areas = ['Reception', 'Customer Service', 'Support Desk', 'VIP Lounge', 'Sales Floor', 'Waiting Area'];
   const resolutions = ['720p', '1080p', '4K'];
+
+  // Calculate grid dimensions based on number of cameras
+  const getGridDimensions = () => {
+    const totalCameras = cameras.length;
+    if (totalCameras <= 1) return { rows: 1, cols: 1 };
+    if (totalCameras <= 4) return { rows: 2, cols: 2 };
+    if (totalCameras <= 6) return { rows: 2, cols: 3 };
+    if (totalCameras <= 9) return { rows: 3, cols: 3 };
+    if (totalCameras <= 12) return { rows: 3, cols: 4 };
+    if (totalCameras <= 16) return { rows: 4, cols: 4 };
+    return { rows: 4, cols: 5 };
+  };
+
+  const { rows, cols } = getGridDimensions();
+
+  // Initialize camera slots
+  React.useEffect(() => {
+    const slots: CameraSlot[] = [];
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        slots.push({
+          id: `slot-${row}-${col}`,
+          camera: null,
+          position: { row, col }
+        });
+      }
+    }
+    
+    // Assign cameras that are already assigned
+    const assignedCameras = cameras.filter(cam => cam.assigned);
+    assignedCameras.forEach((camera, index) => {
+      if (index < slots.length) {
+        slots[index].camera = camera;
+      }
+    });
+    
+    setCameraSlots(slots);
+  }, [cameras, rows, cols]);
 
   const handleAddCamera = () => {
     const newCam: CameraDevice = {
@@ -81,8 +126,7 @@ export const CameraManagement: React.FC = () => {
       area: newCamera.area,
       status: 'online',
       resolution: newCamera.resolution,
-      position: { x: 20, y: 20 },
-      size: { width: 200, height: 150 }
+      assigned: false
     };
     
     setCameras([...cameras, newCam]);
@@ -90,45 +134,88 @@ export const CameraManagement: React.FC = () => {
     setIsAddModalOpen(false);
   };
 
-  const handleMouseDown = useCallback((e: React.MouseEvent, camera: CameraDevice) => {
+  const handleDragStart = (e: React.DragEvent, camera: CameraDevice) => {
+    setDraggedCamera(camera);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setSelectedCamera(camera);
-    setIsDragging(true);
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, slotId: string) => {
+    e.preventDefault();
+    if (!draggedCamera) return;
+
+    const slotIndex = cameraSlots.findIndex(slot => slot.id === slotId);
+    if (slotIndex === -1) return;
+
+    // Update camera slots
+    const newSlots = [...cameraSlots];
     
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-  }, []);
+    // Remove camera from its current slot if it was already assigned
+    const currentSlotIndex = newSlots.findIndex(slot => slot.camera?.id === draggedCamera.id);
+    if (currentSlotIndex !== -1) {
+      newSlots[currentSlotIndex].camera = null;
+    }
+    
+    // If target slot has a camera, swap them
+    const targetSlot = newSlots[slotIndex];
+    if (targetSlot.camera) {
+      // Move the existing camera back to unassigned
+      setCameras(cameras.map(cam => 
+        cam.id === targetSlot.camera?.id 
+          ? { ...cam, assigned: false }
+          : cam.id === draggedCamera.id
+          ? { ...cam, assigned: true }
+          : cam
+      ));
+    } else {
+      // Just assign the dragged camera
+      setCameras(cameras.map(cam => 
+        cam.id === draggedCamera.id 
+          ? { ...cam, assigned: true }
+          : cam
+      ));
+    }
+    
+    // Assign the dragged camera to the target slot
+    newSlots[slotIndex].camera = draggedCamera;
+    
+    setCameraSlots(newSlots);
+    setDraggedCamera(null);
+  };
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !selectedCamera || !canvasRef.current) return;
+  const handleRemoveFromSlot = (slotId: string) => {
+    const slotIndex = cameraSlots.findIndex(slot => slot.id === slotId);
+    if (slotIndex === -1) return;
 
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const newX = Math.max(0, Math.min(
-      canvasRect.width - selectedCamera.size.width,
-      e.clientX - canvasRect.left - dragOffset.x
-    ));
-    const newY = Math.max(0, Math.min(
-      canvasRect.height - selectedCamera.size.height,
-      e.clientY - canvasRect.top - dragOffset.y
-    ));
+    const slot = cameraSlots[slotIndex];
+    if (!slot.camera) return;
 
+    // Update camera to unassigned
     setCameras(cameras.map(cam => 
-      cam.id === selectedCamera.id 
-        ? { ...cam, position: { x: newX, y: newY } }
+      cam.id === slot.camera?.id 
+        ? { ...cam, assigned: false }
         : cam
     ));
-  }, [isDragging, selectedCamera, dragOffset, cameras]);
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setSelectedCamera(null);
-  }, []);
+    // Clear the slot
+    const newSlots = [...cameraSlots];
+    newSlots[slotIndex].camera = null;
+    setCameraSlots(newSlots);
+  };
 
   const handleDeleteCamera = (cameraId: string) => {
     setCameras(cameras.filter(cam => cam.id !== cameraId));
+    
+    // Remove from slots if assigned
+    setCameraSlots(cameraSlots.map(slot => 
+      slot.camera?.id === cameraId 
+        ? { ...slot, camera: null }
+        : slot
+    ));
   };
 
   const getStatusColor = (status: string) => {
@@ -144,28 +231,20 @@ export const CameraManagement: React.FC = () => {
     }
   };
 
-  const resetLayout = () => {
-    const resetCameras = cameras.map((cam, index) => ({
-      ...cam,
-      position: {
-        x: 20 + (index % 3) * 220,
-        y: 20 + Math.floor(index / 3) * 170
-      }
-    }));
-    setCameras(resetCameras);
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'bg-green-100 text-green-800';
+      case 'offline':
+        return 'bg-red-100 text-red-800';
+      case 'maintenance':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  const autoArrange = () => {
-    const cols = Math.ceil(Math.sqrt(cameras.length));
-    const arrangedCameras = cameras.map((cam, index) => ({
-      ...cam,
-      position: {
-        x: 20 + (index % cols) * 220,
-        y: 20 + Math.floor(index / cols) * 170
-      }
-    }));
-    setCameras(arrangedCameras);
-  };
+  const unassignedCameras = cameras.filter(cam => !cam.assigned);
 
   return (
     <div className="space-y-6">
@@ -174,123 +253,142 @@ export const CameraManagement: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Camera Management</h2>
           <p className="text-gray-600 mt-1">Configure and arrange your camera layout</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={autoArrange}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-          >
-            <Grid className="w-4 h-4 mr-2" />
-            Auto Arrange
-          </button>
-          <button
-            onClick={resetLayout}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Reset Layout
-          </button>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#006A71] hover:bg-[#004a51] transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Camera
-          </button>
-        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#006A71] hover:bg-[#004a51] transition-colors"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Camera
+        </button>
       </div>
 
-      {/* Camera Layout Canvas */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Camera Layout</h3>
-          <div className="flex items-center space-x-4 text-sm text-gray-600">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-              Online
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-              Offline
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-              Maintenance
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Panel - Available Cameras */}
+        <div className="lg:col-span-1">
+          <div className="bg-white shadow rounded-lg p-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Available Cameras</h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {unassignedCameras.map((camera) => (
+                <div
+                  key={camera.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, camera)}
+                  className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-3 cursor-move hover:border-[#006A71] hover:bg-[#F2EFE7] transition-all"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(camera.status)}`}></div>
+                      <Camera className="w-4 h-4 text-gray-600" />
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCamera(camera.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="text-sm font-medium text-gray-900 mb-1">{camera.name}</div>
+                  <div className="text-xs text-gray-600 mb-2">{camera.area}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">{camera.resolution}</span>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(camera.status)}`}>
+                      {camera.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {unassignedCameras.length === 0 && (
+                <div className="text-center text-gray-500 py-8">
+                  <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">All cameras are assigned</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
-        
-        <div 
-          ref={canvasRef}
-          className="relative bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg"
-          style={{ height: '600px', width: '100%' }}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          {cameras.map((camera) => (
-            <div
-              key={camera.id}
-              className={`absolute bg-white border-2 rounded-lg shadow-md cursor-move transition-all duration-200 ${
-                selectedCamera?.id === camera.id ? 'border-[#006A71] shadow-lg z-10' : 'border-gray-300 hover:border-[#48A6A7]'
-              }`}
-              style={{
-                left: camera.position.x,
-                top: camera.position.y,
-                width: camera.size.width,
-                height: camera.size.height
+
+        {/* Right Panel - Camera Grid Layout */}
+        <div className="lg:col-span-3">
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Camera Layout ({rows}x{cols})</h3>
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                  Online
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                  Offline
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                  Maintenance
+                </div>
+              </div>
+            </div>
+            
+            <div 
+              className="grid gap-4 p-4 bg-gray-50 rounded-lg min-h-96"
+              style={{ 
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                gridTemplateRows: `repeat(${rows}, 1fr)`
               }}
-              onMouseDown={(e) => handleMouseDown(e, camera)}
             >
-              {/* Camera Header */}
-              <div className="flex items-center justify-between p-2 bg-gray-100 rounded-t-lg">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${getStatusColor(camera.status)}`}></div>
-                  <Camera className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-medium text-gray-700 truncate">{camera.name}</span>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteCamera(camera.id);
-                  }}
-                  className="text-gray-400 hover:text-red-500 transition-colors"
+              {cameraSlots.map((slot) => (
+                <div
+                  key={slot.id}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, slot.id)}
+                  className={`relative border-2 border-dashed rounded-lg aspect-video flex items-center justify-center transition-all ${
+                    slot.camera 
+                      ? 'border-[#006A71] bg-white shadow-md' 
+                      : 'border-gray-300 bg-gray-100 hover:border-[#48A6A7] hover:bg-[#F2EFE7]'
+                  }`}
                 >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-              
-              {/* Camera Feed Area */}
-              <div className="flex-1 bg-gray-900 flex items-center justify-center" style={{ height: 'calc(100% - 40px)' }}>
-                <div className="text-center text-white">
-                  <Monitor className="w-8 h-8 mx-auto mb-1 opacity-75" />
-                  <p className="text-xs">{camera.resolution}</p>
-                  <p className="text-xs text-gray-400">{camera.area}</p>
+                  {slot.camera ? (
+                    <div className="w-full h-full">
+                      {/* Camera Header */}
+                      <div className="flex items-center justify-between p-2 bg-gray-100 rounded-t-lg">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${getStatusColor(slot.camera.status)}`}></div>
+                          <Camera className="w-4 h-4 text-gray-600" />
+                          <span className="text-xs font-medium text-gray-700 truncate">{slot.camera.name}</span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFromSlot(slot.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                      
+                      {/* Camera Feed Area */}
+                      <div className="flex-1 bg-gray-900 flex items-center justify-center rounded-b-lg" style={{ height: 'calc(100% - 32px)' }}>
+                        <div className="text-center text-white">
+                          <Monitor className="w-6 h-6 mx-auto mb-1 opacity-75" />
+                          <p className="text-xs">{slot.camera.resolution}</p>
+                          <p className="text-xs text-gray-400">{slot.camera.area}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-xs">Drop camera here</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-              
-              {/* Drag Handle */}
-              <div className="absolute top-1 right-6 text-gray-400">
-                <Move className="w-3 h-3" />
-              </div>
+              ))}
             </div>
-          ))}
-          
-          {cameras.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p className="text-lg font-medium">No cameras configured</p>
-                <p className="text-sm">Add your first camera to get started</p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Camera List */}
+      {/* Camera List Table */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Camera Devices</h3>
+          <h3 className="text-lg font-medium text-gray-900">All Cameras</h3>
         </div>
         <div className="overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
@@ -309,7 +407,7 @@ export const CameraManagement: React.FC = () => {
                   Resolution
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Position
+                  Assignment
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -332,13 +430,7 @@ export const CameraManagement: React.FC = () => {
                     {camera.area}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      camera.status === 'online' 
-                        ? 'bg-green-100 text-green-800' 
-                        : camera.status === 'offline'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(camera.status)}`}>
                       <div className={`w-1.5 h-1.5 rounded-full mr-1 ${getStatusColor(camera.status)}`}></div>
                       {camera.status}
                     </span>
@@ -346,8 +438,14 @@ export const CameraManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {camera.resolution}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    x: {Math.round(camera.position.x)}, y: {Math.round(camera.position.y)}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      camera.assigned 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {camera.assigned ? 'Assigned' : 'Available'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button className="text-[#006A71] hover:text-[#004a51] mr-3">

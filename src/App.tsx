@@ -8,6 +8,7 @@ type View = 'home' | 'dashboard';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentView, setCurrentView] = useState<View>('home');
+  const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
@@ -17,10 +18,16 @@ function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentView('home');
+    setSelectedShiftId(null);
   };
 
-  const handleNavigate = (view: string) => {
+  const handleNavigate = (view: string, shiftId?: string) => {
     setCurrentView(view as View);
+    if (view === 'sessions' && shiftId) {
+      setSelectedShiftId(shiftId);
+    } else if (view !== 'sessions') {
+      setSelectedShiftId(null);
+    }
   };
 
   return (
@@ -38,7 +45,7 @@ function App() {
       )}
       
       {currentView === 'dashboard' && isLoggedIn && (
-        <Dashboard />
+        <Dashboard onNavigate={handleNavigate} selectedShiftId={selectedShiftId} />
       )}
     </div>
   );

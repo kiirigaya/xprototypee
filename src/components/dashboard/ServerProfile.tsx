@@ -210,8 +210,19 @@ export const ServerProfile: React.FC<ServerProfileProps> = ({ server, onBack, on
                               </div>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="flex items-center space-x-4">
+                            <div className="text-sm text-gray-500">
                             {formatDuration(session.duration)}
+                            </div>
+                            <button
+                              onClick={() => {
+                                // Navigate to session details - in a real app, this would use router
+                                console.log('View session details:', session.id);
+                              }}
+                              className="text-[#006A71] hover:text-[#004a51] text-sm font-medium"
+                            >
+                              View Details
+                            </button>
                           </div>
                         </div>
                         <div className="grid grid-cols-4 gap-4">

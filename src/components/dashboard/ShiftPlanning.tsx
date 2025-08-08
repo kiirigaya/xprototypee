@@ -9,8 +9,18 @@ interface ShiftPlanningProps {
 
 export const ShiftPlanning: React.FC<ShiftPlanningProps> = ({ onViewSessions }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState<string>('All');
   const [newShift, setNewShift] = useState({
+    serverId: '',
+    area: '',
+    camera: '',
+    day: '',
+    startTime: '',
+    endTime: ''
+  });
+  const [editShift, setEditShift] = useState({
     serverId: '',
     area: '',
     camera: '',
@@ -35,6 +45,35 @@ export const ShiftPlanning: React.FC<ShiftPlanningProps> = ({ onViewSessions }) 
       endTime: ''
     });
     setIsAddModalOpen(false);
+  };
+
+  const handleEditShift = () => {
+    if (!editingShift) return;
+    // In a real app, this would make an API call
+    console.log('Editing shift:', editingShift.id, editShift);
+    setEditShift({
+      serverId: '',
+      area: '',
+      camera: '',
+      day: '',
+      startTime: '',
+      endTime: ''
+    });
+    setEditingShift(null);
+    setIsEditModalOpen(false);
+  };
+
+  const openEditModal = (shift: any) => {
+    setEditingShift(shift);
+    setEditShift({
+      serverId: shift.serverId,
+      area: shift.area,
+      camera: shift.camera,
+      day: shift.day,
+      startTime: shift.startTime,
+      endTime: shift.endTime
+    });
+    setIsEditModalOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -174,7 +213,10 @@ export const ShiftPlanning: React.FC<ShiftPlanningProps> = ({ onViewSessions }) 
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-[#006A71] hover:text-[#004a51] mr-3">
+                          <button 
+                            onClick={() => openEditModal(shift)}
+                            className="text-[#006A71] hover:text-[#004a51] mr-3"
+                          >
                             Edit
                           </button>
                           <button 
@@ -297,6 +339,110 @@ export const ShiftPlanning: React.FC<ShiftPlanningProps> = ({ onViewSessions }) 
               className="px-4 py-2 text-sm font-medium text-white bg-[#006A71] hover:bg-[#004a51] rounded-md transition-colors"
             >
               Add Shift
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Shift Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Shift"
+        size="md"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleEditShift(); }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Server</label>
+            <select
+              value={editShift.serverId}
+              onChange={(e) => setEditShift({ ...editShift, serverId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+              required
+            >
+              <option value="">Select a server</option>
+              {servers.map((server) => (
+                <option key={server.id} value={server.id}>{server.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+            <select
+              value={editShift.area}
+              onChange={(e) => setEditShift({ ...editShift, area: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+              required
+            >
+              <option value="">Select an area</option>
+              {areas.map((area) => (
+                <option key={area} value={area}>{area}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Camera</label>
+            <select
+              value={editShift.camera}
+              onChange={(e) => setEditShift({ ...editShift, camera: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+              required
+            >
+              <option value="">Select a camera</option>
+              {cameras.map((camera) => (
+                <option key={camera} value={camera}>{camera}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+            <select
+              value={editShift.day}
+              onChange={(e) => setEditShift({ ...editShift, day: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+              required
+            >
+              <option value="">Select a day</option>
+              {days.map((day) => (
+                <option key={day} value={day}>{day}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+              <input
+                type="time"
+                value={editShift.startTime}
+                onChange={(e) => setEditShift({ ...editShift, startTime: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+              <input
+                type="time"
+                value={editShift.endTime}
+                onChange={(e) => setEditShift({ ...editShift, endTime: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#006A71] hover:bg-[#004a51] rounded-md transition-colors"
+            >
+              Save Changes
             </button>
           </div>
         </form>

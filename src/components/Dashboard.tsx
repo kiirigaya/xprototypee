@@ -17,11 +17,24 @@ import { CameraManagement } from './dashboard/CameraManagement';
 
 type DashboardPanel = 'overview' | 'servers' | 'shifts' | 'sessions' | 'live' | 'cameras';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavigate?: (view: string, shiftId?: string) => void;
+  selectedShiftId?: string | null;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, selectedShiftId }) => {
   const [activePanel, setActivePanel] = useState<DashboardPanel>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [liveTrackingServerId, setLiveTrackingServerId] = useState<string | null>(null);
-  const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
+  const [internalSelectedShiftId, setInternalSelectedShiftId] = useState<string | null>(selectedShiftId || null);
+
+  // Update internal state when prop changes
+  React.useEffect(() => {
+    if (selectedShiftId) {
+      setInternalSelectedShiftId(selectedShiftId);
+      setActivePanel('sessions');
+    }
+  }, [selectedShiftId]);
 
   const navigation = [
     { id: 'overview', name: 'Overview', icon: BarChart3 },
@@ -38,8 +51,11 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleViewSessions = (shiftId: string) => {
-    setSelectedShiftId(shiftId);
+    setInternalSelectedShiftId(shiftId);
     setActivePanel('sessions');
+    if (onNavigate) {
+      onNavigate('sessions', shiftId);
+    }
   };
 
   const renderPanel = () => {
@@ -53,7 +69,7 @@ export const Dashboard: React.FC = () => {
       case 'shifts':
         return <ShiftPlanning onViewSessions={handleViewSessions} />;
       case 'sessions':
-        return <ShiftSessions />;
+        return <ShiftSessions selectedShiftId={internalSelectedShiftId} />;
       case 'live':
         return <LiveSupervision serverId={liveTrackingServerId} />;
       default:
@@ -86,7 +102,7 @@ export const Dashboard: React.FC = () => {
                         setLiveTrackingServerId(null);
                       }
                       if (item.id !== 'sessions') {
-                        setSelectedShiftId(null);
+                        setInternalSelectedShiftId(null);
                       }
                     }}
                     className={`${

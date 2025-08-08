@@ -14,11 +14,18 @@ export const ServerManagement: React.FC<ServerManagementProps> = ({ onStartLiveT
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingServer, setEditingServer] = useState<Server | null>(null);
   const [newServer, setNewServer] = useState({
     name: '',
     email: '',
     phone: '',
     password: ''
+  });
+  const [editServer, setEditServer] = useState({
+    name: '',
+    email: '',
+    phone: ''
   });
 
   const handleAddServer = () => {
@@ -26,6 +33,25 @@ export const ServerManagement: React.FC<ServerManagementProps> = ({ onStartLiveT
     console.log('Adding server:', newServer);
     setNewServer({ name: '', email: '', phone: '', password: '' });
     setIsAddModalOpen(false);
+  };
+
+  const handleEditServer = () => {
+    if (!editingServer) return;
+    // In a real app, this would make an API call
+    console.log('Editing server:', editingServer.id, editServer);
+    setEditServer({ name: '', email: '', phone: '' });
+    setEditingServer(null);
+    setIsEditModalOpen(false);
+  };
+
+  const openEditModal = (server: Server) => {
+    setEditingServer(server);
+    setEditServer({
+      name: server.name,
+      email: server.email,
+      phone: server.phone
+    });
+    setIsEditModalOpen(true);
   };
 
   const getServerShifts = (serverId: string) => {
@@ -161,6 +187,12 @@ export const ServerManagement: React.FC<ServerManagementProps> = ({ onStartLiveT
                   >
                     View Profile
                   </button>
+                  <button
+                    onClick={() => openEditModal(server)}
+                    className="text-[#48A6A7] hover:text-[#006A71] mr-3"
+                  >
+                    Edit
+                  </button>
                   <button className="text-gray-400 hover:text-gray-600">
                     <MoreVertical className="w-4 h-4" />
                   </button>
@@ -232,6 +264,62 @@ export const ServerManagement: React.FC<ServerManagementProps> = ({ onStartLiveT
               className="px-4 py-2 text-sm font-medium text-white bg-[#006A71] hover:bg-[#004a51] rounded-md transition-colors"
             >
               Add Server
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Server Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Server"
+        size="md"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleEditServer(); }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input
+              type="text"
+              value={editServer.name}
+              onChange={(e) => setEditServer({ ...editServer, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={editServer.email}
+              onChange={(e) => setEditServer({ ...editServer, email: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <input
+              type="tel"
+              value={editServer.phone}
+              onChange={(e) => setEditServer({ ...editServer, phone: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#006A71] focus:border-transparent"
+              required
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#006A71] hover:bg-[#004a51] rounded-md transition-colors"
+            >
+              Save Changes
             </button>
           </div>
         </form>

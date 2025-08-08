@@ -3,11 +3,22 @@ import { Calendar, Clock, TrendingUp, TrendingDown, User, Users, Eye, ArrowLeft 
 import { shiftSessions, shifts } from '../../data/dummyData';
 import { SessionDetails } from './SessionDetails';
 
-export const ShiftSessions: React.FC = () => {
+interface ShiftSessionsProps {
+  selectedShiftId?: string | null;
+}
+
+export const ShiftSessions: React.FC<ShiftSessionsProps> = ({ selectedShiftId: propSelectedShiftId }) => {
   const [selectedShift, setSelectedShift] = useState<string>('all');
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+
+  // Set initial filter if a shift ID is provided
+  React.useEffect(() => {
+    if (propSelectedShiftId) {
+      setSelectedShift(propSelectedShiftId);
+    }
+  }, [propSelectedShiftId]);
 
   const getShiftInfo = (shiftId: string) => {
     return shifts.find(shift => shift.id === shiftId);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import { Plus, Calendar, Clock, MapPin, Camera } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { shifts, servers, shiftSessions } from '../../data/dummyData';

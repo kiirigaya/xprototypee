@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, TrendingUp, TrendingDown, User, Users } from 'lucide-react';
+import { Calendar, Clock, TrendingUp, TrendingDown, User, Users, Eye, ArrowLeft } from 'lucide-react';
 import { shiftSessions, shifts } from '../../data/dummyData';
+import { SessionDetails } from './SessionDetails';
 
 export const ShiftSessions: React.FC = () => {
   const [selectedShift, setSelectedShift] = useState<string>('all');
   const [selectedArea, setSelectedArea] = useState<string>('all');
+  const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const getShiftInfo = (shiftId: string) => {
     return shifts.find(shift => shift.id === shiftId);
@@ -56,6 +59,23 @@ export const ShiftSessions: React.FC = () => {
   };
 
   const filteredSessions = getFilteredSessions();
+
+  const handleViewDetails = (sessionId: string) => {
+    setSelectedSession(sessionId);
+    setShowDetails(true);
+  };
+
+  const handleBackToList = () => {
+    setShowDetails(false);
+    setSelectedSession(null);
+  };
+
+  if (showDetails && selectedSession) {
+    const session = shiftSessions.find(s => s.id === selectedSession);
+    if (session) {
+      return <SessionDetails session={session} onBack={handleBackToList} />;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -198,7 +218,8 @@ export const ShiftSessions: React.FC = () => {
 
               {/* Session Details */}
               <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Area:</span>
                     <span className="ml-2 font-medium">{shift?.area}</span>
@@ -211,6 +232,14 @@ export const ShiftSessions: React.FC = () => {
                     <span className="text-gray-500">Session ID:</span>
                     <span className="ml-2 font-medium text-xs text-gray-400">{session.id}</span>
                   </div>
+                  </div>
+                  <button
+                    onClick={() => handleViewDetails(session.id)}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#006A71] hover:bg-[#004a51] transition-colors"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Details
+                  </button>
                 </div>
               </div>
             </div>

@@ -160,10 +160,9 @@ export const CameraManagement: React.FC = () => {
       newSlots[currentSlotIndex].camera = null;
     }
     
-    // If target slot has a camera, swap them
+    // If target slot has a camera, move the existing camera back to unassigned
     const targetSlot = newSlots[slotIndex];
     if (targetSlot.camera) {
-      // Move the existing camera back to unassigned
       setCameras(cameras.map(cam => 
         cam.id === targetSlot.camera?.id 
           ? { ...cam, assigned: false }
@@ -172,7 +171,6 @@ export const CameraManagement: React.FC = () => {
           : cam
       ));
     } else {
-      // Just assign the dragged camera
       setCameras(cameras.map(cam => 
         cam.id === draggedCamera.id 
           ? { ...cam, assigned: true }
@@ -180,7 +178,7 @@ export const CameraManagement: React.FC = () => {
       ));
     }
     
-    // Assign the dragged camera to the target slot
+    // Always assign the dragged camera to the target slot (user's choice)
     newSlots[slotIndex].camera = draggedCamera;
     
     setCameraSlots(newSlots);

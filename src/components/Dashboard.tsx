@@ -5,15 +5,17 @@ import {
   Calendar, 
   Activity, 
   Video, 
-  ChevronRight 
+  ChevronRight,
+  Camera
 } from 'lucide-react';
 import { Overview } from './dashboard/Overview';
 import { ServerManagement } from './dashboard/ServerManagement';
 import { ShiftPlanning } from './dashboard/ShiftPlanning';
 import { ShiftSessions } from './dashboard/ShiftSessions';
 import { LiveSupervision } from './dashboard/LiveSupervision';
+import { CameraManagement } from './dashboard/CameraManagement';
 
-type DashboardPanel = 'overview' | 'servers' | 'shifts' | 'sessions' | 'live';
+type DashboardPanel = 'overview' | 'servers' | 'shifts' | 'sessions' | 'live' | 'cameras';
 
 export const Dashboard: React.FC = () => {
   const [activePanel, setActivePanel] = useState<DashboardPanel>('overview');
@@ -23,6 +25,7 @@ export const Dashboard: React.FC = () => {
   const navigation = [
     { id: 'overview', name: 'Overview', icon: BarChart3 },
     { id: 'servers', name: 'Server Management', icon: Users },
+    { id: 'cameras', name: 'Camera Management', icon: Camera },
     { id: 'shifts', name: 'Shift Planning', icon: Calendar },
     { id: 'sessions', name: 'Shift Sessions', icon: Activity },
     { id: 'live', name: 'Live Supervision', icon: Video },
@@ -39,6 +42,8 @@ export const Dashboard: React.FC = () => {
         return <Overview />;
       case 'servers':
         return <ServerManagement onStartLiveTracking={handleStartLiveTracking} />;
+      case 'cameras':
+        return <CameraManagement />;
       case 'shifts':
         return <ShiftPlanning />;
       case 'sessions':
